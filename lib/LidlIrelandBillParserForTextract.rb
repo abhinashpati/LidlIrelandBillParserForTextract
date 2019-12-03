@@ -4,6 +4,7 @@ require 'StoreData'
 module LidlIrelandBillParserForTextract
   class Error < StandardError;
   end
+
   class JsonParser
 
     @@products = nil
@@ -68,6 +69,10 @@ module LidlIrelandBillParserForTextract
       data[index - 1]["Text"].match(/[0-9]+\sfor\sEUR\s([0-9]*[.])?[0-9]+/)
     end
 
+    def self.isProbablyANumber(text)
+      (text.match(/[0-9]+.[0-9]+/) || text.match(/[0-9]+,[0-9]+/) || text.match(/[0-9]+/))
+    end
+
     def self.getUseFullData(text, data, index)
       if !isPreviousLineMultibuyDiscount(data, index)
         if !@@products.empty? && isPreviousLinePriceChange(data, index)
@@ -102,7 +107,7 @@ module LidlIrelandBillParserForTextract
             if isLineAPrice(text)
               @@products.last.UnitPrice = text[0, text.index(' ')].strip.to_f
               @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
-            elsif text.match(/[0-9]+.[0-9]+/) && isPreviousLineTotal(data, index)
+            elsif isProbablyANumber(text) && isPreviousLineTotal(data, index)
               @@breakLoop = true
             else
               item = StoreData.new
@@ -116,6 +121,19 @@ module LidlIrelandBillParserForTextract
           end
         end
       end
+    end
+
+    def self.isProductPriceZero(product)
+      product.UnitPrice.to_f == 0.0 || product.TotalPrice.to_f == 0.0
+    end
+
+    def self.cleanAndKeepRelaventData
+      @@products.each do |product|
+        if isProbablyANumber(product.ProductName) || isProductPriceZero(product)
+          @@products.delete_at(@@products.index(product))
+        end
+      end
+      @@products
     end
 
     def self.parseLineData(result, blocks_map)
@@ -142,7 +160,7 @@ module LidlIrelandBillParserForTextract
         end
         index += 1
       end
-      @@products
+      cleanAndKeepRelaventData()
     end
 
     :public
@@ -159,6 +177,7 @@ module LidlIrelandBillParserForTextract
       parseLineData(line_blocks, blocks_map)
     end
   end
+
   def self.parseData(jsonFile)
     JsonParser.parseReceiptData(jsonFile)
   end
