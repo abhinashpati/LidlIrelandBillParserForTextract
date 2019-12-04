@@ -73,51 +73,55 @@ module LidlIrelandBillParserForTextract
       (text.match(/[0-9]+.[0-9]+/) || text.match(/[0-9]+,[0-9]+/) || text.match(/[0-9]+/))
     end
 
+    def self.calculateDiscount(text)
+      text.to_f.abs
+    end
+
     def self.getUseFullData(text, data, index)
-      if !isPreviousLineMultibuyDiscount(data, index)
-        if !@@products.empty? && isPreviousLinePriceChange(data, index)
-          @@products.last.UnitPrice =
-              @@products.last.UnitPrice + (text.to_f /
-                  @@products.last.ProductQuantity)
-          @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
-        elsif !@@products.empty? && isPreviousLineDiscountedItem(data, index)
-          @@products.last.UnitPrice =
-              @@products.last.UnitPrice + (text.to_f /
-                  @@products.last.ProductQuantity)
-          @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
-        elsif text.match(/[0-9]+\s[xX]\s+[+-]?([0-9]*[.])?[0-9]+/) || text.match(/[0-9]+\s+[+-]?([0-9]*[.])?[0-9]+/)
-          if (text.downcase.include?("X".downcase))
-            @@products.last.UnitPrice = text.downcase[text.downcase.index('X'.downcase) + 1, text.size].to_f
-            @@products.last.ProductQuantity = text.downcase[0].to_i
-          else
-            @@products.last.UnitPrice = text.downcase[text.downcase.index(" ".downcase) + 1, text.size].to_f
-            @@products.last.ProductQuantity = text.downcase[0].to_i
-          end
-          @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
-
-          #CODE HERE
-        elsif text.match(/[0-9]+\sfor\sEUR\s([0-9]*[.])?[0-9]+/)
-          @@products.last.ProductQuantity = text[text.index('EUR') + 4, text.size].to_i
-          @@products.last.UnitPrice = text[0, text.index('for') - 1].to_f / @@products.last.ProductQuantity
-          @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
-
-          #CODE HERE
+      if !@@products.empty? && isPreviousLinePriceChange(data, index)
+        @@products.last.UnitPrice =
+            @@products.last.UnitPrice + (text.to_f /
+                @@products.last.ProductQuantity)
+        @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
+        @@products.last.Discount = calculateDiscount(text)
+      elsif !@@products.empty? && isPreviousLineDiscountedItem(data, index)
+        @@products.last.Discount = calculateDiscount(text)
+        @@products.last.UnitPrice =
+            @@products.last.UnitPrice + (text.to_f /
+                @@products.last.ProductQuantity)
+        @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
+      elsif text.match(/[0-9]+\s[xX]\s+[+-]?([0-9]*[.])?[0-9]+/) || text.match(/[0-9]+\s+[+-]?([0-9]*[.])?[0-9]+/)
+        if (text.downcase.include?("X".downcase))
+          @@products.last.UnitPrice = text.downcase[text.downcase.index('X'.downcase) + 1, text.size].to_f
+          @@products.last.ProductQuantity = text.downcase[0].to_i
         else
-          unless isAKeyWord(text)
-            if isLineAPrice(text)
-              @@products.last.UnitPrice = text[0, text.index(' ')].strip.to_f
-              @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
-            elsif isProbablyANumber(text) && isPreviousLineTotal(data, index)
-              @@breakLoop = true
-            else
-              item = StoreData.new
-              item.ProductQuantity = 1
-              item.ProductName = text.strip
-              item.Discount = 0.0
-              item.UnitPrice = 0.0
-              item.TotalPrice = 0.0
-              @@products.push(item)
-            end
+          @@products.last.UnitPrice = text.downcase[text.downcase.index(" ".downcase) + 1, text.size].to_f
+          @@products.last.ProductQuantity = text.downcase[0].to_i
+        end
+        @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
+
+        #CODE HERE
+      elsif text.match(/[0-9]+\sfor\sEUR\s([0-9]*[.])?[0-9]+/)
+        @@products.last.ProductQuantity = text[text.index('EUR') + 4, text.size].to_i
+        @@products.last.UnitPrice = text[0, text.index('for') - 1].to_f / @@products.last.ProductQuantity
+        @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
+      elsif isPreviousLineMultibuyDiscount(data, index)
+        @@products.last.Discount = calculateDiscount(text)
+      else
+        unless isAKeyWord(text)
+          if isLineAPrice(text)
+            @@products.last.UnitPrice = text[0, text.index(' ')].strip.to_f
+            @@products.last.TotalPrice = @@products.last.UnitPrice * @@products.last.ProductQuantity
+          elsif isProbablyANumber(text) && isPreviousLineTotal(data, index)
+            @@breakLoop = true
+          else
+            item = StoreData.new
+            item.ProductQuantity = 1
+            item.ProductName = text.strip
+            item.Discount = 0.0
+            item.UnitPrice = 0.0
+            item.TotalPrice = 0.0
+            @@products.push(item)
           end
         end
       end
@@ -136,7 +140,7 @@ module LidlIrelandBillParserForTextract
       @@products
     end
 
-    def self.parseLineData(result, blocks_map)
+    def self.parseLineData(result)
 
       @@products = []
       index = 0
@@ -174,7 +178,7 @@ module LidlIrelandBillParserForTextract
         next unless block['BlockType'] == 'LINE'
         line_blocks.append(block)
       end
-      parseLineData(line_blocks, blocks_map)
+      parseLineData(line_blocks)
     end
   end
 
