@@ -10,7 +10,7 @@ module LidlIrelandBillParserForTextract
     @@products = nil
     @@breakLoop = false
 
-    :private
+    #:private
 
     def self.getDataLidl(jsonFile)
       data = JSON.parse(jsonFile)
@@ -18,7 +18,7 @@ module LidlIrelandBillParserForTextract
     end
 
     def self.isTextPriceChange(text)
-      (text.downcase == 'Price change'.downcase) || text.downcase.include?('Price '.downcase)
+      text.downcase == 'Price change'.downcase || text.downcase.include?('Price '.downcase)
     end
 
     def self.isPreviousLinePriceChange(data, index)
@@ -31,17 +31,15 @@ module LidlIrelandBillParserForTextract
     end
 
     def self.isLineAPrice(text)
-      text.match(/[0-9]+.[0-9]+\s+[a-cA-C]/) ||
-          text.match(/[0-9]+,[0-9]+\s+[a-cA-C]/)
+      !!text.match(/([0-9]*[,])?([0-9]*[.])?+[0-9]+\s+[a-cA-C]/)
     end
 
     def self.isTextDiscountedItem(text)
-      text.match(/[a-zA-z]+\s[a-zA-z]+\s([0-9]*[.])?[0-9]+%/)
+      !!text.match(/[[a-zA-z]+\s]+([0-9]*[.])?[0-9]+%/)
     end
 
     def self.isATransId(text)
-      text.include?('TRN-ID') || text.include?('TRN ') ||
-          text.match(/\S+:\sIE[0-9]+/) || text.match(/.+IE[0-9]{10,}/)
+      text.include?('TRN-ID') || text.include?('TRN ') || !!text.match(/(.+)?IE[0-9]{10,}/)
     end
 
     def self.isAKeyWord(text)
@@ -167,7 +165,7 @@ module LidlIrelandBillParserForTextract
       cleanAndKeepRelaventData()
     end
 
-    :public
+    #:public
 
     def self.parseReceiptData(jsonFile)
       data = getDataLidl(jsonFile)
