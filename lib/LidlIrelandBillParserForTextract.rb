@@ -10,7 +10,7 @@ module LidlIrelandBillParserForTextract
     @@products = nil
     @@breakLoop = false
 
-    #:private
+    :private
 
     def self.getDataLidl(jsonFile)
       data = JSON.parse(jsonFile)
@@ -31,15 +31,15 @@ module LidlIrelandBillParserForTextract
     end
 
     def self.isLineAPrice(text)
-      !!text.match(/([0-9]*[,])?([0-9]*[.])?+[0-9]+\s+[a-cA-C]/)
+      text.match(/([0-9]*[,])?([0-9]*[.])?+[0-9]+\s+[a-cA-C]/)
     end
 
     def self.isTextDiscountedItem(text)
-      !!text.match(/[[a-zA-z]+\s]+([0-9]*[.])?[0-9]+%/)
+      text.match(/[[a-zA-z]+\s]+([0-9]*[.])?[0-9]+%/)
     end
 
     def self.isATransId(text)
-      text.include?('TRN-ID') || text.include?('TRN ') || !!text.match(/(.+)?IE[0-9]{10,}/)
+      text.include?('TRN-ID') || text.include?('TRN ') || text.match(/(.+)?IE[0-9]{10,}/)
     end
 
     def self.isAKeyWord(text)
@@ -70,6 +70,7 @@ module LidlIrelandBillParserForTextract
     def self.isProbablyANumber(text)
       (text.match(/[0-9]+.[0-9]+/) || text.match(/[0-9]+,[0-9]+/) || text.match(/[0-9]+/))
     end
+
 
     def self.calculateDiscount(text)
       text.to_f.abs
@@ -131,7 +132,7 @@ module LidlIrelandBillParserForTextract
 
     def self.cleanAndKeepRelaventData
       @@products.each do |product|
-        if isProbablyANumber(product.ProductName) || isProductPriceZero(product)
+        if isProductPriceZero(product)
           @@products.delete_at(@@products.index(product))
         end
       end
@@ -165,7 +166,7 @@ module LidlIrelandBillParserForTextract
       cleanAndKeepRelaventData()
     end
 
-    #:public
+    :public
 
     def self.parseReceiptData(jsonFile)
       data = getDataLidl(jsonFile)
